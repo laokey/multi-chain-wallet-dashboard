@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useSendTransaction } from 'wagmi';
 import { parseUnits, formatUnits, Address, isAddress } from 'viem';
 import { erc20Abi } from 'viem';
 import { Asset } from '@/types';
@@ -18,7 +18,20 @@ export function TransferModal({ asset, onClose }: TransferModalProps) {
 
   const isNative = asset.token.address === 'native';
 
-  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { 
+    writeContractAsync, 
+    data: writeHash, 
+    isPending: isWritePending 
+  } = useWriteContract();
+
+  const { 
+    sendTransactionAsync, 
+    data: sendHash, 
+    isPending: isSendPending 
+  } = useSendTransaction();
+
+  const hash = writeHash || sendHash;
+  const isPending = isWritePending || isSendPending;
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
@@ -41,13 +54,13 @@ export function TransferModal({ asset, onClose }: TransferModalProps) {
     try {
       if (isNative) {
         // ETH 转账
-        writeContract({
+        await sendTransactionAsync({
           to: toAddress as Address,
           value: parseUnits(amount, asset.token.decimals),
         });
       } else {
         // ERC20 转账
-        writeContract({
+        await writeContractAsync({
           address: asset.token.address as Address,
           abi: erc20Abi,
           functionName: 'transfer',
@@ -111,7 +124,7 @@ export function TransferModal({ asset, onClose }: TransferModalProps) {
           </div>
         </div>
 
-        {(error || writeError) && (
+        {error && (
           <div
             style={{
               padding: '0.75rem',
@@ -122,7 +135,7 @@ export function TransferModal({ asset, onClose }: TransferModalProps) {
               fontSize: '0.9rem',
             }}
           >
-            {error || writeError?.message || '转账失败'}
+            {error}
           </div>
         )}
 

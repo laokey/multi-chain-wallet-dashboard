@@ -7,7 +7,7 @@ export const supportedChains = [
   bsc,
   arbitrum,
   optimism,
-];
+] as const;
 
 export const chainNames: Record<number, string> = {
   1: 'Ethereum',
